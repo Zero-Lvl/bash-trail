@@ -1,136 +1,29 @@
 var __defProp = Object.defineProperty;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+var __defProps = Object.defineProperties;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __typeError = (msg) => {
+  throw TypeError(msg);
 };
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
-// src/progress.mjs
-var progress_exports = {};
-__export(progress_exports, {
-  KEY: () => KEY,
-  MAX_BYTES: () => MAX_BYTES,
-  MAX_TEXT: () => MAX_TEXT,
-  ProgressStore: () => ProgressStore,
-  decodeBackup: () => decodeBackup,
-  emptyLesson: () => emptyLesson,
-  emptyProgress: () => emptyProgress,
-  encodeBackup: () => encodeBackup,
-  validateProgress: () => validateProgress
-});
-function invalid() {
-  throw new Error("Invalid v2 backup. Nothing was replaced.");
-}
-function emptyProgress() {
-  return { schemaVersion: 2, lessons: {}, exams: {}, lastLesson: null };
-}
-function emptyLesson(lesson) {
-  return { step: 0, notes: "", draft: lesson.task.editor?.starter ?? "", command: lesson.task.runCommand ?? "", snapshot: null, lastRun: null, passed: false, badge: null, quiz: [null, null], hints: 0, localChecks: [] };
-}
-function validateProgress(v, lessonIds = null, sectionIds = null) {
-  if (!exact(v, ["schemaVersion", "lessons", "exams", "lastLesson"]) || v.schemaVersion !== 2 || !plain(v.lessons) || !plain(v.exams) || !(v.lastLesson === null || typeof v.lastLesson === "string" && (!lessonIds || lessonIds.includes(v.lastLesson)))) invalid();
-  for (const [id, l] of Object.entries(v.lessons)) {
-    if (["__proto__", "constructor", "prototype"].includes(id) || lessonIds && !lessonIds.includes(id) || !exact(l, ["step", "notes", "draft", "command", "snapshot", "lastRun", "passed", "badge", "quiz", "hints", "localChecks"])) invalid();
-    if (![0, 1, 2].includes(l.step) || !text(l.notes) || !text(l.draft) || !text(l.command) || typeof l.passed !== "boolean" || ![null, "browserVerified", "localSelfAttested"].includes(l.badge) || !choices(l.quiz, 2) || !Number.isInteger(l.hints) || l.hints < 0 || l.hints > 3 || !Array.isArray(l.localChecks) || l.localChecks.length > 32 || !l.localChecks.every((x) => typeof x === "boolean") || l.passed !== (l.badge !== null)) invalid();
-    if (l.snapshot !== null) {
-      if (!exact(l.snapshot, ["files", "directories", "cwd"]) || !plain(l.snapshot.files) || !Array.isArray(l.snapshot.directories) || !virtualPath(l.snapshot.cwd) || !l.snapshot.directories.every(path)) invalid();
-      for (const [p, t] of Object.entries(l.snapshot.files)) if (!path(p) || typeof t !== "string") invalid();
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
     }
-    if (l.lastRun !== null && (!exact(l.lastRun, ["stdout", "stderr", "exitCode", "cwd"]) || !text(l.lastRun.stdout) || !text(l.lastRun.stderr) || !Number.isInteger(l.lastRun.exitCode) || !virtualPath(l.lastRun.cwd))) invalid();
-  }
-  for (const [id, e] of Object.entries(v.exams)) if (["__proto__", "constructor", "prototype"].includes(id) || sectionIds && !sectionIds.includes(id) || !exact(e, ["answers", "passed"]) || !Array.isArray(e.answers) || e.answers.length < 3 || e.answers.length > 20 || !choices(e.answers, e.answers.length) || typeof e.passed !== "boolean") invalid();
-  return v;
-}
-function encodeBackup(state) {
-  validateProgress(state);
-  const raw = JSON.stringify(state);
-  if (bytes(raw) > MAX_BYTES) throw new Error("Backup exceeds 16 MiB. Remove or reduce files or notes before saving.");
-  return raw;
-}
-function decodeBackup(raw, lessons, sections) {
-  if (typeof raw !== "string" || bytes(raw) > MAX_BYTES) throw new Error("Backup exceeds 16 MiB. Nothing was replaced.");
-  const value = JSON.parse(raw);
-  if (value?.schemaVersion !== 2) throw new Error("Legacy or unrecognized backup. Keep it as an original v1 backup; it cannot award v2 credit.");
-  validateProgress(value, lessons, sections);
-  encodeBackup(value);
-  return value;
-}
-var KEY, MAX_BYTES, MAX_TEXT, bytes, plain, exact, text, virtualPath, path, choices, ProgressStore;
-var init_progress = __esm({
-  "src/progress.mjs"() {
-    KEY = "bash-trail.progress.v2";
-    MAX_BYTES = 16 * 1024 * 1024;
-    MAX_TEXT = 65536;
-    bytes = (value) => new TextEncoder().encode(value).length;
-    plain = (v) => v !== null && typeof v === "object" && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
-    exact = (v, keys) => plain(v) && Object.keys(v).length === keys.length && keys.every((k) => Object.hasOwn(v, k));
-    text = (v) => typeof v === "string" && v.length <= MAX_TEXT;
-    virtualPath = (v) => typeof v === "string" && v.startsWith("/") && !v.includes("\0") && (v === "/" || v.slice(1).split("/").every((x) => x !== "" && x !== ".." && x !== "."));
-    path = (v) => virtualPath(v) && (v === "/home/learner" || v.startsWith("/home/learner/"));
-    choices = (v, n) => Array.isArray(v) && v.length === n && v.every((x) => x === null || Number.isInteger(x) && x >= 0 && x <= 3);
-    ProgressStore = class {
-      #validState;
-      constructor(storage, lessons, sections) {
-        this.storage = storage;
-        this.lessons = lessons;
-        this.sections = sections;
-        this.error = "";
-        this.state = emptyProgress();
-        try {
-          const raw = storage.getItem(KEY);
-          if (raw) this.state = decodeBackup(raw, lessons, sections);
-        } catch (e) {
-          this.error = `Saved progress could not be loaded: ${e.message} Export any original backup before replacing it.`;
-        }
-        this.#validState = structuredClone(this.state);
-      }
-      replace(value) {
-        validateProgress(value, this.lessons, this.sections);
-        const raw = encodeBackup(value);
-        const next = structuredClone(value);
-        try {
-          this.storage.setItem(KEY, raw);
-          this.error = "";
-        } catch (e) {
-          this.error = "Storage is unavailable or full. Work is in this tab only: export a backup now.";
-          this.state = next;
-          this.#validState = structuredClone(next);
-          throw new Error(this.error);
-        }
-        this.state = next;
-        this.#validState = structuredClone(next);
-      }
-      save() {
-        try {
-          validateProgress(this.state, this.lessons, this.sections);
-          encodeBackup(this.state);
-        } catch (e) {
-          this.state = structuredClone(this.#validState);
-          this.error = `Changes not saved: ${e.message} Previous valid progress retained; export it and repair/remove/reset before leaving.`;
-          throw new Error(this.error);
-        }
-        this.replace(this.state);
-      }
-      import(raw) {
-        const next = decodeBackup(raw, this.lessons, this.sections);
-        this.replace(next);
-      }
-      export() {
-        return encodeBackup(this.state);
-      }
-      legacy() {
-        try {
-          return this.storage.getItem("bash-trail.progress.v1");
-        } catch {
-          return null;
-        }
-      }
-    };
-  }
-});
+  return a;
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 
 // curriculum/s01.json
 var s01_default = {
@@ -6089,72 +5982,300 @@ if __name__ == "__main__":
 // public-course:course:curriculum
 var course_curriculum_default = [s01_default, s02_default, s03_default, s04_default, s05_default, s06_default, s07_default, s08_default, s09_default, s10_default, s11_default, s12_default];
 
-// src/app.mjs
-init_progress();
+// src/progress.mjs
+var KEY = "bash-trail.progress.v2";
+var MAX_BYTES = 16 * 1024 * 1024;
+var MAX_TEXT = 65536;
+var bytes = (value) => new TextEncoder().encode(value).length;
+var plain = (v) => v !== null && typeof v === "object" && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
+var exact = (v, keys) => plain(v) && Object.keys(v).length === keys.length && keys.every((k) => Object.hasOwn(v, k));
+var text = (v) => typeof v === "string" && v.length <= MAX_TEXT;
+var virtualPath = (v) => typeof v === "string" && v.startsWith("/") && !v.includes("\0") && (v === "/" || v.slice(1).split("/").every((x) => x !== "" && x !== ".." && x !== "."));
+var path = (v) => virtualPath(v) && (v === "/home/learner" || v.startsWith("/home/learner/"));
+var choices = (v, n) => Array.isArray(v) && v.length === n && v.every((x) => x === null || Number.isInteger(x) && x >= 0 && x <= 3);
+function invalid() {
+  throw new Error("Invalid v2 backup. Nothing was replaced.");
+}
+function emptyProgress() {
+  return { schemaVersion: 2, lessons: {}, exams: {}, lastLesson: null };
+}
+function emptyLesson(lesson) {
+  var _a, _b, _c;
+  return { step: 0, notes: "", draft: (_b = (_a = lesson.task.editor) == null ? void 0 : _a.starter) != null ? _b : "", command: (_c = lesson.task.runCommand) != null ? _c : "", snapshot: null, lastRun: null, passed: false, badge: null, quiz: [null, null], hints: 0, localChecks: [] };
+}
+function validateProgress(v, lessonIds = null, sectionIds = null) {
+  if (!exact(v, ["schemaVersion", "lessons", "exams", "lastLesson"]) || v.schemaVersion !== 2 || !plain(v.lessons) || !plain(v.exams) || !(v.lastLesson === null || typeof v.lastLesson === "string" && (!lessonIds || lessonIds.includes(v.lastLesson)))) invalid();
+  for (const [id, l] of Object.entries(v.lessons)) {
+    if (["__proto__", "constructor", "prototype"].includes(id) || lessonIds && !lessonIds.includes(id) || !exact(l, ["step", "notes", "draft", "command", "snapshot", "lastRun", "passed", "badge", "quiz", "hints", "localChecks"])) invalid();
+    if (![0, 1, 2].includes(l.step) || !text(l.notes) || !text(l.draft) || !text(l.command) || typeof l.passed !== "boolean" || ![null, "browserVerified", "localSelfAttested"].includes(l.badge) || !choices(l.quiz, 2) || !Number.isInteger(l.hints) || l.hints < 0 || l.hints > 3 || !Array.isArray(l.localChecks) || l.localChecks.length > 32 || !l.localChecks.every((x) => typeof x === "boolean") || l.passed !== (l.badge !== null)) invalid();
+    if (l.snapshot !== null) {
+      if (!exact(l.snapshot, ["files", "directories", "cwd"]) || !plain(l.snapshot.files) || !Array.isArray(l.snapshot.directories) || !virtualPath(l.snapshot.cwd) || !l.snapshot.directories.every(path)) invalid();
+      for (const [p, t] of Object.entries(l.snapshot.files)) if (!path(p) || typeof t !== "string") invalid();
+    }
+    if (l.lastRun !== null && (!exact(l.lastRun, ["stdout", "stderr", "exitCode", "cwd"]) || !text(l.lastRun.stdout) || !text(l.lastRun.stderr) || !Number.isInteger(l.lastRun.exitCode) || !virtualPath(l.lastRun.cwd))) invalid();
+  }
+  for (const [id, e] of Object.entries(v.exams)) if (["__proto__", "constructor", "prototype"].includes(id) || sectionIds && !sectionIds.includes(id) || !exact(e, ["answers", "passed"]) || !Array.isArray(e.answers) || e.answers.length < 3 || e.answers.length > 20 || !choices(e.answers, e.answers.length) || typeof e.passed !== "boolean") invalid();
+  return v;
+}
+function encodeBackup(state) {
+  validateProgress(state);
+  const raw = JSON.stringify(state);
+  if (bytes(raw) > MAX_BYTES) throw new Error("Backup exceeds 16 MiB. Remove or reduce files or notes before saving.");
+  return raw;
+}
+function decodeBackup(raw, lessons, sections) {
+  if (typeof raw !== "string" || bytes(raw) > MAX_BYTES) throw new Error("Backup exceeds 16 MiB. Nothing was replaced.");
+  const value = JSON.parse(raw);
+  if ((value == null ? void 0 : value.schemaVersion) !== 2) throw new Error("Legacy or unrecognized backup. Keep it as an original v1 backup; it cannot award v2 credit.");
+  validateProgress(value, lessons, sections);
+  encodeBackup(value);
+  return value;
+}
+var _validState;
+var ProgressStore = class {
+  constructor(storage, lessons, sections) {
+    __privateAdd(this, _validState);
+    this.storage = storage;
+    this.lessons = lessons;
+    this.sections = sections;
+    this.error = "";
+    this.state = emptyProgress();
+    try {
+      const raw = storage.getItem(KEY);
+      if (raw) this.state = decodeBackup(raw, lessons, sections);
+    } catch (e) {
+      this.error = `Saved progress could not be loaded: ${e.message} Export any original backup before replacing it.`;
+    }
+    __privateSet(this, _validState, structuredClone(this.state));
+  }
+  replace(value) {
+    validateProgress(value, this.lessons, this.sections);
+    const raw = encodeBackup(value);
+    const next = structuredClone(value);
+    try {
+      this.storage.setItem(KEY, raw);
+      this.error = "";
+    } catch (e) {
+      this.error = "Storage is unavailable or full. Work is in this tab only: export a backup now.";
+      this.state = next;
+      __privateSet(this, _validState, structuredClone(next));
+      throw new Error(this.error);
+    }
+    this.state = next;
+    __privateSet(this, _validState, structuredClone(next));
+  }
+  save() {
+    try {
+      validateProgress(this.state, this.lessons, this.sections);
+      encodeBackup(this.state);
+    } catch (e) {
+      this.state = structuredClone(__privateGet(this, _validState));
+      this.error = `Changes not saved: ${e.message} Previous valid progress retained; export it and repair/remove/reset before leaving.`;
+      throw new Error(this.error);
+    }
+    this.replace(this.state);
+  }
+  import(raw) {
+    const next = decodeBackup(raw, this.lessons, this.sections);
+    this.replace(next);
+  }
+  export() {
+    return encodeBackup(this.state);
+  }
+  legacy() {
+    try {
+      return this.storage.getItem("bash-trail.progress.v1");
+    } catch (e) {
+      return null;
+    }
+  }
+};
+_validState = new WeakMap();
+
+// src/compatibility.mjs
+function environmentDefault() {
+  if (typeof globalThis !== "undefined") return globalThis;
+  if (typeof self !== "undefined") return self;
+  return {};
+}
+function getBrowserCapabilities(environment) {
+  var env = environment || environmentDefault();
+  return {
+    worker: typeof env.Worker === "function",
+    promise: typeof env.Promise === "function",
+    map: typeof env.Map === "function",
+    set: typeof env.Set === "function",
+    url: typeof env.URL === "function",
+    textEncoder: typeof env.TextEncoder === "function",
+    textDecoder: typeof env.TextDecoder === "function",
+    arrayAt: !!(env.Array && typeof env.Array.prototype.at === "function"),
+    objectHasOwn: !!(env.Object && typeof env.Object.hasOwn === "function"),
+    stringReplaceAll: !!(env.String && typeof env.String.prototype.replaceAll === "function"),
+    structuredClone: typeof env.structuredClone === "function",
+    webAssembly: !!(env.WebAssembly && typeof env.WebAssembly.instantiate === "function"),
+    sharedArrayBuffer: typeof env.SharedArrayBuffer === "function",
+    crossOriginIsolated: env.crossOriginIsolated === true,
+    secureContext: env.isSecureContext === true,
+    touch: !!(env.navigator && env.navigator.maxTouchPoints > 0),
+    visualViewport: !!env.visualViewport
+  };
+}
+function checkBrowserCompatibility(environment) {
+  var env = environment || environmentDefault();
+  var capabilities = getBrowserCapabilities(env);
+  var ua = env.navigator && typeof env.navigator.userAgent === "string" ? env.navigator.userAgent.slice(0, 512) : "Unavailable";
+  var ios = /(?:iPhone|iPad|iPod).*?OS (\d+(?:_\d+){0,2})/.exec(ua);
+  var safari = /Version\/(\d+(?:\.\d+){0,2}).*Safari\//.exec(ua);
+  var required = ["worker", "promise", "map", "set", "url", "textEncoder", "textDecoder", "arrayAt", "objectHasOwn", "stringReplaceAll"];
+  var missing = required.filter(function(key) {
+    return !capabilities[key];
+  });
+  var warnings = [];
+  if (!capabilities.webAssembly) warnings.push("WebAssembly is unavailable. Shell checks may work, but real Python cannot start.");
+  if (!capabilities.structuredClone) warnings.push("structuredClone is unavailable; the lesson app needs a newer browser even if the shell can start.");
+  if (ios && parseFloat(ios[1].replace(/_/g, ".")) < 16.4) warnings.push("Pyodide 314.0.7 recommends Safari 16.4 or newer. This is a user-agent hint, not a device test.");
+  return {
+    capabilities,
+    browser: { userAgent: ua, iosVersion: ios ? ios[1].replace(/_/g, ".") : null, safariVersion: safari ? safari[1] : null, versionSource: "user-agent; may be emulated", physicalDeviceVerified: false },
+    shellSupported: missing.length === 0,
+    pythonSupported: missing.length === 0 && capabilities.webAssembly,
+    appSupported: missing.length === 0 && capabilities.structuredClone,
+    missing,
+    warnings,
+    guidance: missing.length ? "Required browser features are missing: " + missing.join(", ") + ". Update Safari/iOS or try a current browser, then retry Browser check." : "Feature presence is not proof of compatibility. Run the real worker check; physical iPhone Safari remains unverified."
+  };
+}
 
 // src/runtime-client.mjs
+var SAFE_NAMES = ["Error", "SecurityError", "TypeError", "SyntaxError", "NetworkError", "DataCloneError", "NotSupportedError"];
+var RuntimeError = class extends Error {
+  constructor(message, code, details = {}) {
+    super(message);
+    this.name = "RuntimeError";
+    this.code = code;
+    this.details = details;
+    this.retryable = true;
+  }
+};
 var RuntimeClient = class {
-  constructor({ factory, timeoutMs = 15e3, initTimeoutMs = 9e4 } = {}) {
-    this.factory = factory ?? (() => new Worker(new URL("./runtime/worker.js", import.meta.url), { type: "module" }));
+  constructor({ factory, timeoutMs = 15e3, initTimeoutMs = 9e4, onError = () => {
+  } } = {}) {
+    this.factory = factory != null ? factory : (() => {
+      const compatibility = checkBrowserCompatibility();
+      if (!compatibility.shellSupported) throw new RuntimeError(compatibility.guidance, "BROWSER_UNSUPPORTED", { stage: "capabilities", missing: compatibility.missing });
+      return new Worker(new URL("./runtime/worker.js", import.meta.url), { type: "module" });
+    });
+    this.onError = onError;
     this.timeoutMs = timeoutMs;
     this.initTimeoutMs = initTimeoutMs;
     this.sequence = 0;
     this.pending = /* @__PURE__ */ new Map();
     this.worker = null;
+    this.generation = 0;
+    this.pythonReady = false;
+    this.pythonLoading = null;
   }
   ensure() {
     if (this.worker) return;
-    this.worker = this.factory();
-    this.worker.onmessage = ({ data }) => {
+    const worker = this.factory();
+    this.worker = worker;
+    worker.onmessage = ({ data }) => {
+      var _a, _b;
+      if (this.worker !== worker) return;
+      if (!data || !Number.isSafeInteger(data.id) || typeof data.ok !== "boolean") {
+        this.fail(new RuntimeError("The runtime sent an unreadable response. Retry to start a fresh worker, or run Browser check.", "WORKER_PROTOCOL", { stage: "worker-message", asset: "runtime/worker.js" }));
+        return;
+      }
       const entry = this.pending.get(data.id);
       if (!entry) return;
       clearTimeout(entry.timer);
       this.pending.delete(data.id);
       if (data.ok) entry.resolve(data.result);
-      else entry.reject(new Error(typeof data.error === "string" ? data.error : data.error?.message ?? "Runtime failed"));
+      else entry.reject(new RuntimeError(typeof data.error === "string" ? data.error : (_b = (_a = data.error) == null ? void 0 : _a.message) != null ? _b : "Runtime operation failed", "RUNTIME_OPERATION", { stage: "runtime-operation", operation: entry.op }));
     };
-    this.worker.onerror = () => this.stop("Runtime worker failed. Reset to try again.");
+    worker.onerror = (event) => {
+      if (this.worker !== worker) return;
+      const details = { stage: "worker-load-or-execution", asset: "runtime/worker.js" };
+      if (Number.isInteger(event.lineno) && event.lineno > 0) details.line = event.lineno;
+      if (Number.isInteger(event.colno) && event.colno > 0) details.column = event.colno;
+      this.fail(new RuntimeError("Runtime worker failed to load or execute. Retry; if this repeats, reload, check content blockers/network access, update Safari/iOS and run Browser check.", "WORKER_ERROR", details));
+    };
+    const onMessageError = () => {
+      if (this.worker === worker) this.fail(new RuntimeError("The browser could not read a runtime message. Retry with a fresh worker; if this repeats, reload or run Browser check.", "WORKER_MESSAGE_ERROR", { stage: "worker-message", asset: "runtime/worker.js" }));
+    };
+    if (typeof worker.addEventListener === "function") worker.addEventListener("messageerror", onMessageError);
+    else worker.onmessageerror = onMessageError;
   }
   request(op, payload = {}, { initialization = false } = {}) {
-    this.ensure();
+    try {
+      this.ensure();
+    } catch (cause) {
+      const error = cause instanceof RuntimeError ? cause : new RuntimeError("Could not start the runtime worker. Reload or retry; check browser content restrictions and run Browser check.", "WORKER_CREATION", { stage: "worker-creation", asset: "runtime/worker.js", name: SAFE_NAMES.includes(cause == null ? void 0 : cause.name) ? cause.name : "Error" });
+      this.onError(error);
+      return Promise.reject(error);
+    }
     const id = ++this.sequence;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => this.stop(`${op} timed out. Work since the last snapshot may be lost. Reset to continue.`), op === "init" || initialization ? this.initTimeoutMs : this.timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
+      const budgetMs = op === "init" || initialization ? this.initTimeoutMs : this.timeoutMs;
+      const timer = setTimeout(() => this.fail(new RuntimeError(`${op} timed out after ${Math.ceil(budgetMs / 1e3)} seconds. Work since the last snapshot may be lost. Retry to restore saved work; run Browser check if loading keeps failing.`, "RUNTIME_TIMEOUT", { stage: initialization ? "python-warmup" : "runtime-request", operation: op, budgetMs })), budgetMs);
+      this.pending.set(id, { resolve, reject, timer, op });
       try {
-        this.worker.postMessage({ ...payload, id, op });
-      } catch (error) {
-        this.stop(error.message);
+        this.worker.postMessage(__spreadProps(__spreadValues({}, payload), { id, op }));
+      } catch (cause) {
+        this.fail(new RuntimeError("The browser could not send work to the runtime worker. Retry, or reload and run Browser check.", "WORKER_POST_MESSAGE", { stage: "worker-send", operation: op, name: SAFE_NAMES.includes(cause.name) ? cause.name : "Error" }));
       }
     });
   }
+  fail(error) {
+    this.stop(error);
+    this.onError(error);
+  }
   stop(message = "Stopped. Last saved work is preserved; the worker will restart on your next action.") {
-    this.worker?.terminate();
+    var _a;
+    const error = message instanceof Error ? message : new RuntimeError(message, "STOPPED", { stage: "stopped" });
+    this.generation++;
+    (_a = this.worker) == null ? void 0 : _a.terminate();
     this.worker = null;
     this.pythonReady = false;
     this.pythonLoading = null;
     for (const p of this.pending.values()) {
       clearTimeout(p.timer);
-      p.reject(new Error(message));
+      p.reject(error);
     }
     this.pending.clear();
   }
   async init({ fixtures = {}, directories = [], cwd = "/home/learner" } = {}) {
     this.stop();
+    const generation = this.generation;
     const result = await this.request("init", { fixtures, directories, cwd, pyodideURL: new URL("./vendor/pyodide/", import.meta.url).href });
+    if (generation !== this.generation) throw new RuntimeError("Stopped before initialization completed. Retry to restore saved work.", "STOPPED", { stage: "stopped" });
     if (Object.keys(fixtures).some((path2) => path2.endsWith(".py"))) await this.preparePython();
+    if (generation !== this.generation) throw new RuntimeError("Stopped before initialization completed. Retry to restore saved work.", "STOPPED", { stage: "stopped" });
     return result;
   }
   async preparePython() {
     if (this.pythonReady) return;
-    if (!this.pythonLoading) this.pythonLoading = this.request("exec", { command: 'python3 -c "pass"' }, { initialization: true }).then((result) => {
-      if (result.exitCode !== 0) throw new Error(result.stderr || "Python initialization failed");
-      this.pythonReady = true;
-    });
+    if (!this.pythonLoading) {
+      const generation = this.generation;
+      const loading = this.request("exec", { command: 'python3 -c "pass"' }, { initialization: true }).then((result) => {
+        if (generation !== this.generation) throw new RuntimeError("Stopped before Python initialization completed. Retry to restore saved work.", "STOPPED", { stage: "python-warmup" });
+        if (result.exitCode !== 0) {
+          const error = new RuntimeError("Python initialization failed. Retry; if it repeats, check the network, reload and run Browser check with Python enabled.", "PYTHON_INITIALIZATION", { stage: "python-warmup", asset: "vendor/pyodide/" });
+          this.fail(error);
+          throw error;
+        }
+        this.pythonReady = true;
+      }).finally(() => {
+        if (this.pythonLoading === loading) this.pythonLoading = null;
+      });
+      this.pythonLoading = loading;
+    }
     await this.pythonLoading;
   }
   async exec(command) {
+    const generation = this.generation;
     if (/\bpython(?:3)?\b/.test(command)) await this.preparePython();
+    if (generation !== this.generation) throw new RuntimeError("Stopped before execution began. Retry to restore saved work.", "STOPPED", { stage: "stopped" });
     return this.request("exec", { command });
   }
   write(path2, text2) {
@@ -6168,8 +6289,179 @@ var RuntimeClient = class {
   }
 };
 
+// src/browser-check.mjs
+var CAPABILITIES = ["worker", "promise", "map", "set", "url", "textEncoder", "textDecoder", "arrayAt", "objectHasOwn", "stringReplaceAll", "structuredClone", "webAssembly", "sharedArrayBuffer", "crossOriginIsolated", "secureContext", "touch", "visualViewport"];
+var STAGES = ["capabilities", "worker", "shell", "python-warmup", "python"];
+var MESSAGES = {
+  BROWSER_UNSUPPORTED: "Required browser features are missing. Update Safari/iOS or use a current browser, then retry.",
+  WORKER_CREATION: "The browser could not create the same-origin worker. Retry; check browser restrictions or content blockers.",
+  WORKER_ERROR: "The worker failed to load or execute. Retry; check network/content blockers, reload, and update Safari/iOS if needed.",
+  WORKER_MESSAGE_ERROR: "The browser could not read a worker message. Retry with a fresh worker or reload.",
+  WORKER_POST_MESSAGE: "The browser could not send a worker message. Retry or reload.",
+  WORKER_PROTOCOL: "The worker returned an unreadable response. Retry or reload to replace stale assets.",
+  RUNTIME_TIMEOUT: "The runtime exceeded its time budget. Retry on a stable connection; Python warmup may take up to 90 seconds.",
+  RUNTIME_OPERATION: "The fixed runtime check failed. Retry; use the failing stage and capabilities to investigate.",
+  PYTHON_INITIALIZATION: "Real Python failed to initialize. Retry; check network/content blockers and Safari/iOS version.",
+  PYTHON_UNAVAILABLE: "WebAssembly is unavailable, so real Python cannot run in this browser.",
+  CHECK_MISMATCH: "The actual interpreter result did not match the fixed browser-check output.",
+  STOPPED: "Browser check stopped. Retry starts a fresh empty worker.",
+  DIAGNOSTIC_FAILED: "Browser check could not complete. Reload and retry; use this report to describe the failing stage."
+};
+function safeError(error) {
+  var code = error && Object.prototype.hasOwnProperty.call(MESSAGES, error.code) ? error.code : "DIAGNOSTIC_FAILED";
+  var out = { code, message: MESSAGES[code], retryable: true };
+  var source = error && error.details;
+  var details = {};
+  if (source) {
+    if (["capabilities", "worker-creation", "worker-load-or-execution", "worker-message", "worker-send", "runtime-request", "runtime-operation", "python-warmup", "stopped"].indexOf(source.stage) !== -1) details.stage = source.stage;
+    if (["init", "exec", "read", "write", "snapshot"].indexOf(source.operation) !== -1) details.operation = source.operation;
+    if (["runtime/worker.js", "vendor/pyodide/"].indexOf(source.asset) !== -1) details.asset = source.asset;
+    if (["Error", "SecurityError", "TypeError", "SyntaxError", "NetworkError", "DataCloneError", "NotSupportedError"].indexOf(source.name) !== -1) details.name = source.name;
+    ["line", "column", "budgetMs"].forEach(function(key) {
+      if (typeof source[key] === "number" && isFinite(source[key]) && source[key] >= 0) details[key] = source[key];
+    });
+    if (Array.isArray(source.missing)) details.missing = source.missing.filter(function(key) {
+      return CAPABILITIES.indexOf(key) !== -1;
+    });
+  }
+  out.details = details;
+  return out;
+}
+function safeResult(result) {
+  var out = { validated: !!(result && result.validated) };
+  if (!result) return out;
+  if (["", "browser-check", "browser-check\n"].indexOf(result.stdout) !== -1) out.stdout = result.stdout;
+  if (result.stderr === "") out.stderr = "";
+  out.stderrPresent = typeof result.stderr === "string" && result.stderr.length > 0;
+  if (typeof result.exitCode === "number" && isFinite(result.exitCode)) out.exitCode = result.exitCode;
+  return out;
+}
+function validate(result, expected) {
+  if (!result || result.stdout !== expected || result.stderr !== "" || result.exitCode !== 0) throw new RuntimeError(MESSAGES.CHECK_MISMATCH, "CHECK_MISMATCH");
+  return { stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode, validated: true };
+}
+function formatBrowserReport(report) {
+  report = report || {};
+  var browser = report.browser || {};
+  var out = {
+    schemaVersion: 1,
+    kind: "bash-trail-browser-check",
+    physicalDeviceVerified: false,
+    passed: report.passed === true,
+    pythonRequested: report.pythonRequested === true,
+    browser: { userAgent: typeof browser.userAgent === "string" ? browser.userAgent.slice(0, 512) : "Unavailable", iosVersion: typeof browser.iosVersion === "string" && /^\d+(?:\.\d+){0,2}$/.test(browser.iosVersion) ? browser.iosVersion : null, safariVersion: typeof browser.safariVersion === "string" && /^\d+(?:\.\d+){0,2}$/.test(browser.safariVersion) ? browser.safariVersion : null, versionSource: "user-agent; may be emulated", physicalDeviceVerified: false },
+    capabilities: {},
+    stages: []
+  };
+  CAPABILITIES.forEach(function(key) {
+    out.capabilities[key] = !!(report.capabilities && report.capabilities[key]);
+  });
+  if (Array.isArray(report.stages)) report.stages.forEach(function(stage) {
+    if (!stage || STAGES.indexOf(stage.id) === -1) return;
+    var clean = { id: stage.id, status: ["running", "passed", "failed", "skipped"].indexOf(stage.status) !== -1 ? stage.status : "failed" };
+    if (typeof stage.durationMs === "number" && isFinite(stage.durationMs) && stage.durationMs >= 0) clean.durationMs = Math.round(stage.durationMs);
+    if (stage.result) clean.result = safeResult(stage.result);
+    if (stage.error) clean.error = safeError(stage.error);
+    out.stages.push(clean);
+  });
+  if (report.error) out.error = safeError(report.error);
+  return JSON.stringify(out, null, 2);
+}
+async function runBrowserCheck(options) {
+  options = options || {};
+  var compatibility = checkBrowserCompatibility();
+  var report = { passed: false, pythonRequested: options.python === true, browser: compatibility.browser, capabilities: compatibility.capabilities, stages: [] };
+  var client = new RuntimeClient({ timeoutMs: options.timeoutMs === void 0 ? 15e3 : options.timeoutMs, initTimeoutMs: options.initTimeoutMs === void 0 ? 9e4 : options.initTimeoutMs });
+  var signal = options.signal;
+  function abort() {
+    client.stop();
+  }
+  function notify(stage2) {
+    if (typeof options.onStage === "function") options.onStage(JSON.parse(JSON.stringify(stage2)));
+  }
+  async function stage(id, action) {
+    var entry = { id, status: "running" };
+    report.stages.push(entry);
+    notify(entry);
+    var started = Date.now();
+    try {
+      if (signal && signal.aborted) throw new RuntimeError(MESSAGES.STOPPED, "STOPPED");
+      var result = await action();
+      entry.status = "passed";
+      if (result) entry.result = result;
+    } catch (error) {
+      entry.status = "failed";
+      entry.error = safeError(error);
+      throw error;
+    } finally {
+      entry.durationMs = Date.now() - started;
+      notify(entry);
+    }
+  }
+  if (signal && typeof signal.addEventListener === "function") signal.addEventListener("abort", abort);
+  try {
+    await stage("capabilities", async function() {
+      if (!compatibility.shellSupported) throw new RuntimeError(compatibility.guidance, "BROWSER_UNSUPPORTED", { stage: "capabilities", missing: compatibility.missing });
+    });
+    await stage("worker", async function() {
+      await client.init({ fixtures: {}, directories: [], cwd: "/home/learner" });
+    });
+    await stage("shell", async function() {
+      return validate(await client.exec("printf browser-check"), "browser-check");
+    });
+    if (report.pythonRequested) {
+      await stage("python-warmup", async function() {
+        if (!compatibility.pythonSupported) throw new RuntimeError(MESSAGES.PYTHON_UNAVAILABLE, "PYTHON_UNAVAILABLE");
+        await client.preparePython();
+      });
+      await stage("python", async function() {
+        return validate(await client.exec(`python3 -c 'print("browser-check")'`), "browser-check\n");
+      });
+    } else {
+      var skipped = { id: "python", status: "skipped" };
+      report.stages.push(skipped);
+      notify(skipped);
+    }
+    report.passed = true;
+  } catch (error) {
+    report.error = safeError(error);
+  } finally {
+    client.stop();
+    if (signal && typeof signal.removeEventListener === "function") signal.removeEventListener("abort", abort);
+  }
+  return JSON.parse(formatBrowserReport(report));
+}
+
+// src/player-viewport.mjs
+function installKeyboardViewport(window2, root) {
+  const viewport = window2.visualViewport, doc = root.ownerDocument;
+  const update = () => {
+    var _a;
+    const inset = viewport && (!viewport.scale || Math.abs(viewport.scale - 1) < 0.05) ? Math.max(0, window2.innerHeight - viewport.height - viewport.offsetTop) : 0;
+    doc.documentElement.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+    if (inset > 0) {
+      const input = doc.activeElement;
+      if (input && root.contains(input) && /^(INPUT|TEXTAREA)$/.test(input.tagName) && input.getBoundingClientRect) {
+        const box = input.getBoundingClientRect(), bottom = viewport.height + viewport.offsetTop - 105;
+        if (box.bottom > bottom) (_a = window2.scrollBy) == null ? void 0 : _a.call(window2, 0, box.bottom - bottom + 16);
+      }
+    }
+  };
+  viewport == null ? void 0 : viewport.addEventListener("resize", update);
+  viewport == null ? void 0 : viewport.addEventListener("scroll", update);
+  window2.addEventListener("resize", update);
+  update();
+  return () => {
+    viewport == null ? void 0 : viewport.removeEventListener("resize", update);
+    viewport == null ? void 0 : viewport.removeEventListener("scroll", update);
+    window2.removeEventListener("resize", update);
+    doc.documentElement.style.removeProperty("--keyboard-inset");
+  };
+}
+
 // src/checks.mjs
 async function evaluateChecks(client, checks, lastRun, factory = () => new RuntimeClient(), isCurrent = () => true) {
+  var _a, _b, _c;
   const results = [];
   let snapshot;
   for (const check of checks) {
@@ -6178,7 +6470,7 @@ async function evaluateChecks(client, checks, lastRun, factory = () => new Runti
     try {
       switch (check.kind) {
         case "cwd":
-          snapshot ??= await client.request("snapshot");
+          snapshot != null ? snapshot : snapshot = await client.request("snapshot");
           actual = snapshot.cwd;
           passed = actual === expected;
           break;
@@ -6199,19 +6491,19 @@ async function evaluateChecks(client, checks, lastRun, factory = () => new Runti
           break;
         }
         case "stdout":
-          actual = lastRun?.stdout ?? null;
+          actual = (_a = lastRun == null ? void 0 : lastRun.stdout) != null ? _a : null;
           passed = lastRun !== null && actual === expected;
           break;
         case "stderr":
-          actual = lastRun?.stderr ?? null;
+          actual = (_b = lastRun == null ? void 0 : lastRun.stderr) != null ? _b : null;
           passed = lastRun !== null && actual === expected;
           break;
         case "exit":
-          actual = lastRun?.exitCode ?? null;
+          actual = (_c = lastRun == null ? void 0 : lastRun.exitCode) != null ? _c : null;
           passed = lastRun !== null && actual === expected;
           break;
         case "run": {
-          snapshot ??= await client.request("snapshot");
+          snapshot != null ? snapshot : snapshot = await client.request("snapshot");
           if (!isCurrent()) return [];
           const isolated = factory();
           try {
@@ -6219,7 +6511,7 @@ async function evaluateChecks(client, checks, lastRun, factory = () => new Runti
             if (!isCurrent()) return [];
             const r = await isolated.exec(check.command);
             actual = { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode };
-            expected = { stdout: check.expected, ...check.stderr !== null && check.stderr !== void 0 ? { stderr: check.stderr } : {}, ...check.exitCode !== null && check.exitCode !== void 0 ? { exitCode: check.exitCode } : {} };
+            expected = __spreadValues(__spreadValues({ stdout: check.expected }, check.stderr !== null && check.stderr !== void 0 ? { stderr: check.stderr } : {}), check.exitCode !== null && check.exitCode !== void 0 ? { exitCode: check.exitCode } : {});
             passed = Object.entries(expected).every(([k, v]) => actual[k] === v);
           } finally {
             isolated.stop();
@@ -6243,22 +6535,22 @@ function canPass(lesson, state, results = []) {
   return quiz && results.length > 0 && results.every((r) => r.passed);
 }
 function examUnlocked(section, state) {
-  return section.lessons.every((l) => state.lessons[l.id]?.passed);
-}
-function completion(sections, state) {
-  return { done: sections.reduce((n, s) => n + Number(Boolean(state.exams[s.id]?.passed)) + s.lessons.filter((l) => state.lessons[l.id]?.passed).length, 0), total: sections.reduce((n, s) => n + 1 + s.lessons.length, 0), browserVerified: Object.values(state.lessons).filter((l) => l.badge === "browserVerified").length, localSelfAttested: Object.values(state.lessons).filter((l) => l.badge === "localSelfAttested").length };
+  return section.lessons.every((l) => {
+    var _a;
+    return (_a = state.lessons[l.id]) == null ? void 0 : _a.passed;
+  });
 }
 
 // src/app.mjs
-var DISPLAY_LIMIT = 16e3;
-var shown = (v) => {
-  const text2 = typeof v === "string" ? v : JSON.stringify(v, null, 2);
-  return text2 === void 0 ? "No learner run yet" : text2.length > DISPLAY_LIMIT ? text2.slice(0, DISPLAY_LIMIT) + "\n[display truncated]" : text2;
+var CURSOR_KEY = "bash-trail.player.v3";
+var shown = (value) => {
+  const text2 = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  return (text2 != null ? text2 : "No output").slice(0, 16e3);
 };
-function mountApp(root, sections, { window = globalThis.window, storage, clientFactory = () => new RuntimeClient() } = {}) {
+function mountApp(root, sections, { window: window2 = globalThis.window, storage, clientFactory = () => new RuntimeClient(), browserCheck = runBrowserCheck } = {}) {
   if (storage === void 0) {
     try {
-      storage = window.localStorage;
+      storage = window2.localStorage;
     } catch (error) {
       storage = { getItem() {
         throw error;
@@ -6268,93 +6560,52 @@ function mountApp(root, sections, { window = globalThis.window, storage, clientF
     }
   }
   const doc = root.ownerDocument, lessons = sections.flatMap((s) => s.lessons), store = new ProgressStore(storage, lessons.map((l) => l.id), sections.map((s) => s.id));
-  let route = null, generation = 0, revision = 0, practice = null, ready = false, busy = false, example = null, results = [], exampleResult = null, notice = store.error, downloaded = /* @__PURE__ */ new Set();
-  const snapshotWarnings = /* @__PURE__ */ new Map();
-  const status = () => [...new Set([notice, store.error, ...snapshotWarnings.values()].filter(Boolean))].join(" ");
-  const state = () => route?.lesson ? store.state.lessons[route.lesson.id] : null;
+  let route, card = 0, sheet = null, notice = store.error, practice = null, ready = false, busy = false, generation = 0, revision = 0, results = [], example = null, exampleResult = null;
+  const activeChecks = /* @__PURE__ */ new Set(), snapshotWarnings = /* @__PURE__ */ new Map(), downloaded = /* @__PURE__ */ new Set();
+  let localCard = 0, diagnostic = null, diagnosticAbort = null;
+  const practical = () => results.length > 0 && results.every((r) => r.passed);
+  const state = () => (route == null ? void 0 : route.lesson) ? store.state.lessons[route.lesson.id] : null;
   function el(tag, text2, attrs = {}) {
     const n = doc.createElement(tag);
-    if (text2 !== null && text2 !== void 0) n.textContent = text2;
+    if (text2 !== void 0 && text2 !== null) n.textContent = text2;
     for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
     return n;
   }
-  function add(parent, ...children) {
-    for (const n of children) if (n) parent.appendChild(n);
+  function add(parent, ...nodes) {
+    for (const n of nodes) if (n) parent.appendChild(n);
     return parent;
-  }
-  function button(text2, fn, primary = false) {
-    const n = el("button", text2, { type: "button", class: primary ? "primary" : "" });
-    n.addEventListener("click", fn);
-    return n;
   }
   function p(text2) {
     return el("p", text2);
   }
-  function list(items, ordered = false) {
-    const n = el(ordered ? "ol" : "ul");
-    items.forEach((x) => n.appendChild(el("li", x)));
-    return n;
-  }
-  function details(title, ...nodes) {
-    return add(el("details"), el("summary", title), ...nodes);
+  function button(text2, fn, primary = false) {
+    const b = el("button", text2, { type: "button", class: primary ? "primary" : "quiet" });
+    b.addEventListener("click", fn);
+    return b;
   }
   function save() {
     try {
       store.save();
     } catch (e) {
       notice = e.message;
-      announce();
     }
+    announce();
+  }
+  function status() {
+    return [...new Set([notice, store.error, ...snapshotWarnings.values()].filter(Boolean))].join(" ");
   }
   function announce() {
-    const node = root.querySelector("#status");
-    if (node) node.textContent = status();
-  }
-  function invalidate() {
-    revision++;
-    results = [];
-    const s = state();
-    if (s) {
-      s.passed = false;
-      s.badge = null;
-    }
-    save();
-  }
-  async function capture(token = generation, updates = {}) {
-    if (practice && ready) {
-      const id = route.lesson.id;
-      let candidate;
-      try {
-        const snapshot = await practice.snapshot();
-        if (token !== generation || !state()) return false;
-        candidate = structuredClone(store.state);
-        Object.assign(candidate.lessons[id], updates, { snapshot });
-        encodeBackup(candidate);
-      } catch (e) {
-        if (token === generation) {
-          snapshotWarnings.set(id, `Latest files not saved: ${e.message} The previous valid snapshot is retained. Export the last valid backup; repair/remove files or reset practice before leaving. Files in the live worker are not included in that backup.`);
-          announce();
-        }
-        return false;
-      }
-      snapshotWarnings.delete(id);
-      try {
-        store.replace(candidate);
-      } catch (e) {
-        notice = e.message;
-        announce();
-        return false;
-      }
-      return true;
-    }
-    return false;
+    const n = root.querySelector("#status");
+    if (n) n.textContent = status();
   }
   function retire() {
+    diagnosticAbort == null ? void 0 : diagnosticAbort.abort();
+    diagnosticAbort = null;
     generation++;
     for (const c of activeChecks) c.stop();
     activeChecks.clear();
-    practice?.stop();
-    example?.stop();
+    practice == null ? void 0 : practice.stop();
+    example == null ? void 0 : example.stop();
     practice = null;
     example = null;
     ready = false;
@@ -6362,99 +6613,531 @@ function mountApp(root, sections, { window = globalThis.window, storage, clientF
     results = [];
     exampleResult = null;
   }
-  async function navigate(next) {
-    const token = generation;
-    try {
-      if (!busy) await capture(token);
-    } catch (e) {
-      notice = e.message;
-    }
-    if (token !== generation) return;
+  function stop() {
     retire();
-    route = next;
-    if (next?.lesson) {
-      const l = next.lesson;
-      store.state.lessons[l.id] ??= emptyLesson(l);
-      store.state.lastLesson = l.id;
-      window.history?.replaceState(null, "", `#lesson=${encodeURIComponent(l.id)}`);
-      save();
-    } else if (next?.exam) window.history?.replaceState(null, "", `#exam=${next.exam.id}`);
-    else window.history?.replaceState(null, "", "#");
+    notice = "Stopped. Worker terminated. Last saved files and drafts are preserved. Run again to recover.";
     render();
-    window.scrollTo?.(0, 0);
   }
   async function ensurePractice() {
+    var _a, _b, _c;
     if (!practice) practice = clientFactory();
+    const client = practice, token = generation;
     if (!ready) {
       const l = route.lesson, s = state(), snap = s.snapshot;
-      await practice.init({ fixtures: snap?.files ?? l.task.files, directories: snap?.directories ?? l.task.directories, cwd: snap?.cwd ?? l.task.cwd });
+      await client.init({ fixtures: (_a = snap == null ? void 0 : snap.files) != null ? _a : l.task.files, directories: (_b = snap == null ? void 0 : snap.directories) != null ? _b : l.task.directories, cwd: (_c = snap == null ? void 0 : snap.cwd) != null ? _c : l.task.cwd });
+      if (token !== generation || client !== practice) {
+        client.stop();
+        return;
+      }
       ready = true;
     }
+  }
+  async function capture(token = generation, updates = {}) {
+    if (!practice || !ready) return false;
+    const id = route.lesson.id;
+    let candidate;
+    try {
+      const snapshot = await practice.snapshot();
+      if (token !== generation) return false;
+      candidate = structuredClone(store.state);
+      Object.assign(candidate.lessons[id], updates, { snapshot });
+      encodeBackup(candidate);
+    } catch (e) {
+      if (token === generation) {
+        snapshotWarnings.set(id, `Latest files not saved: ${e.message} Previous valid snapshot retained. Export the last valid backup; repair/remove files or reset practice before leaving. Live worker files are not in that backup.`);
+        announce();
+      }
+      return false;
+    }
+    snapshotWarnings.delete(id);
+    try {
+      store.replace(candidate);
+    } catch (e) {
+      notice = e.message;
+      announce();
+    }
+    return true;
+  }
+  function revealFeedback() {
+    var _a;
+    if (sheet) return;
+    const target = root.querySelector("#status"), footer2 = root.querySelector(".actionbar");
+    if (!(target == null ? void 0 : target.getBoundingClientRect) || !(footer2 == null ? void 0 : footer2.getBoundingClientRect)) return;
+    const bottom = target.getBoundingClientRect().bottom, edge = footer2.getBoundingClientRect().top - 20;
+    if (bottom > edge) (_a = window2.scrollBy) == null ? void 0 : _a.call(window2, 0, bottom - edge);
   }
   async function action(fn, { python = false } = {}) {
     if (busy) return;
     const token = generation;
     busy = true;
-    notice = python ? "Loading real Python WASM if needed (~13 MiB before server compression). First use downloads self-hosted assets and may take up to 90 seconds." : "Working\u2026 Stop is always available.";
-    announce();
-    root.querySelectorAll("[data-work]").forEach((n) => n.disabled = true);
+    notice = python ? "Loading real Python if needed. First use may download about 13 MiB and take up to 90 seconds. Stop is available." : "Running\u2026 Stop is available.";
+    render();
     try {
       await fn(token);
     } catch (e) {
       if (token === generation) {
-        notice = e.message;
-        if (!practice?.worker) ready = false;
+        notice = `Run could not finish: ${e.message} Use Run to retry.`;
+        practice == null ? void 0 : practice.stop();
+        practice = null;
+        ready = false;
       }
     } finally {
       if (token === generation) {
         busy = false;
         render();
+        revealFeedback();
       }
     }
   }
-  function stop() {
-    retire();
-    notice = "Stopped. Worker terminated. Your last saved snapshot and drafts are preserved; next Run recreates the worker.";
+  function invalidate() {
+    revision++;
+    results = [];
+    if (!busy) notice = "";
+    save();
+    const primary = root.querySelector(".actionbar .primary");
+    if (primary && card === route.lesson.teach.length + 1) primary.textContent = "Run";
+    const feedback = root.querySelector("#feedback");
+    if (feedback) feedback.textContent = "";
+  }
+  function run() {
+    const l = route.lesson, command = state().command;
+    if (!(command == null ? void 0 : command.trim())) {
+      notice = "Type a command, then choose Run.";
+      announce();
+      return;
+    }
+    const checkingRevision = revision;
+    results = [];
+    action(async (token) => {
+      await ensurePractice();
+      if (token !== generation) return;
+      if (l.task.editor) await practice.write(l.task.editor.path, state().draft);
+      if (token !== generation) return;
+      const r = await practice.exec(command);
+      if (token !== generation) return;
+      const lastRun = { stdout: r.stdout.slice(0, MAX_TEXT), stderr: r.stderr.slice(0, MAX_TEXT), exitCode: r.exitCode, cwd: r.cwd };
+      const saved = await capture(token, { lastRun });
+      if (token !== generation) return;
+      if (!saved) {
+        notice = `${r.exitCode === 0 ? "Run succeeded" : "Run finished"}, but latest files not saved.`;
+        return;
+      }
+      const checked = await evaluateChecks(practice, l.task.checks, lastRun, () => {
+        const c = clientFactory(), oldStop = c.stop.bind(c);
+        activeChecks.add(c);
+        c.stop = (...args) => {
+          activeChecks.delete(c);
+          oldStop(...args);
+        };
+        return c;
+      }, () => token === generation && checkingRevision === revision);
+      if (token !== generation) return;
+      if (checkingRevision !== revision) {
+        results = [];
+        notice = "Your input changed while running. Run again to check the current draft.";
+        return;
+      }
+      results = checked;
+      notice = practical() ? "Practical checks passed. Continue when ready." : "Run complete. Not yet \u2014 use the clue beside your code.";
+    }, { python: l.mode === "python" || command.includes("python") });
+  }
+  function transcript(parent, result) {
+    var _a;
+    if (!result) return;
+    add(parent, el("h3", "Terminal output"), el("pre", shown(((_a = result.stdout) != null ? _a : "") + (result.stderr ? `${result.stdout ? "\n[stderr]\n" : ""}${result.stderr}` : "") || "(no output)"), { "aria-label": "Terminal output", class: "terminal" }), button("Run details", () => {
+      sheet = "run";
+      render();
+    }));
+  }
+  function exampleUI(content, l) {
+    add(content, el("h2", l.example.title), p(l.example.explanation));
+    for (const [path2, source] of Object.entries(l.example.files)) if (/\.(py|sh)$/.test(path2)) {
+      const label = `Example source \xB7 ${path2}`;
+      add(content, add(el("section", null, { "aria-label": label }), el("h3", label), el("pre", source)));
+    }
+    add(content, el("h3", "Run this example"), el("pre", l.example.code));
+    if (l.mode === "local") add(content, p("Real Linux required. This source is for reading; this browser does not run it."));
+    else {
+      add(content, p("Separate example space. Your practice files stay unchanged; examples earn no credit."), button("Run example", () => action(async (token) => {
+        const client = clientFactory();
+        example = client;
+        try {
+          await client.init({ fixtures: l.example.files, directories: l.example.directories, cwd: l.example.cwd });
+          if (token !== generation) return;
+          const r = await client.exec(l.example.code);
+          if (token === generation) {
+            exampleResult = r;
+            notice = "Example complete. Your practice work is unchanged.";
+          }
+        } finally {
+          client.stop();
+          if (example === client) example = null;
+        }
+      }, { python: l.mode === "python" || l.example.code.includes("python") })));
+      transcript(content, exampleResult);
+      if (busy) add(content, el("p", "Running example\u2026", { "data-busy": "" }));
+    }
+    footer("Continue", () => move(card + 1));
+    if (busy) root.querySelector(".actionbar .primary").disabled = true;
+  }
+  function localUI(content, l) {
+    var _a;
+    const setup = l.local.setup.length, commands = l.local.commands.length, downloadAt = setup + commands + 1;
+    add(content, el("p", "Real Linux required", { class: "badge" }), p("Run this lab on Linux you control. Completion is self-attested, never browser-verified."));
+    const next = () => {
+      localCard++;
+      cursor();
+      render();
+    };
+    if (localCard < setup) {
+      add(content, el("h2", `Local setup \xB7 ${localCard + 1} of ${setup}`), p(l.local.setup[localCard]));
+      footer("Continue", next);
+    } else if (localCard === setup) {
+      add(content, el("h2", "Your local task"), p(l.task.goal));
+      const requirements = el("ul");
+      l.task.requirements.forEach((t) => add(requirements, el("li", t)));
+      add(content, requirements);
+      for (const [path2, source] of Object.entries(l.task.files)) add(content, el("h3", path2), el("pre", source));
+      if (l.task.editor) add(content, el("h3", l.task.editor.path), el("pre", l.task.editor.starter));
+      footer("Continue", next);
+    } else if (localCard < downloadAt) {
+      const command = l.local.commands[localCard - setup - 1];
+      add(content, el("h2", command.label), el("pre", command.command), p(command.expected));
+      footer("Continue", next);
+    } else if (localCard === downloadAt || !downloaded.has(l.id)) {
+      add(content, el("h2", "Verify on your Linux machine"), p("Save verify_lab.py beside your artifact. Read it, then run it locally. Only attest after it reports status 0 and unittest OK."), el("pre", "python3 verify_lab.py -v"));
+      footer(downloaded.has(l.id) ? "Continue" : "Download local verifier", () => {
+        if (downloaded.has(l.id)) {
+          next();
+          return;
+        }
+        download("verify_lab.py", l.local.testFile, "text/x-python");
+        downloaded.add(l.id);
+        notice = "Verifier downloaded. Run it locally before attesting.";
+        render();
+      });
+    } else {
+      const index = localCard - downloadAt - 1;
+      add(content, el("h2", "Local self-attestation"));
+      const check = el("input", null, { type: "checkbox" });
+      check.checked = (_a = state().localChecks[index]) != null ? _a : false;
+      check.addEventListener("change", () => {
+        state().localChecks[index] = check.checked;
+        save();
+      });
+      add(content, add(el("label", null, { class: "choice" }), check, doc.createTextNode(l.local.checks[index])));
+      footer("Continue", () => {
+        if (!state().localChecks[index]) {
+          notice = "Confirm this only after running your local tests.";
+          announce();
+          return;
+        }
+        if (index + 1 < l.local.checks.length) next();
+        else move(card + 1);
+      });
+    }
+    const back = root.querySelector(".actionbar .quiet");
+    if (back) {
+      back.replaceWith(button("Back", () => {
+        if (localCard > 0) {
+          localCard--;
+          cursor();
+          render();
+        } else move(card - 1);
+      }));
+    }
+  }
+  function practiceUI(content, l) {
+    if (l.mode === "local") {
+      localUI(content, l);
+      return;
+    }
+    add(content, el("h2", "Practice"), p(l.task.goal));
+    const req = el("ul", null, { class: "criteria" });
+    l.task.requirements.forEach((t) => add(req, el("li", t)));
+    add(content, req);
+    if (l.task.editor) {
+      const editor = el("textarea", null, { "aria-label": `Code editor: ${l.task.editor.path}`, rows: 9, spellcheck: "false", autocorrect: "off", autocapitalize: "off", autocomplete: "off", maxlength: MAX_TEXT, class: "code-editor" });
+      editor.value = state().draft;
+      editor.addEventListener("input", () => {
+        state().draft = editor.value;
+        invalidate();
+      });
+      if (state().passed) editor.setAttribute("readonly", "");
+      add(content, el("label", l.task.editor.path), editor);
+    }
+    const input = el("input", null, { type: "text", "aria-label": "Your command", spellcheck: "false", autocorrect: "off", autocapitalize: "off", autocomplete: "off", maxlength: MAX_TEXT, placeholder: l.task.editor ? "Command and arguments" : "Type a command, then Run", enterkeyhint: "go" });
+    input.value = state().command;
+    if (state().passed) input.setAttribute("readonly", "");
+    input.addEventListener("input", () => {
+      state().command = input.value;
+      invalidate();
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!busy && !state().passed) run();
+      }
+    });
+    add(content, el("label", l.task.editor ? "Run command \xB7 edit arguments as needed" : "Your command"), input);
+    transcript(content, state().lastRun);
+    const feedback = el("div", null, { id: "feedback", class: "feedback", "aria-live": "polite" });
+    const failed = results.find((r) => !r.passed);
+    if (failed) add(feedback, p(failed.clue), button("Compare expected and actual", () => {
+      sheet = "check";
+      render();
+    }));
+    add(content, feedback);
+    if (busy) add(content, el("p", "Working\u2026", { "data-busy": "", class: "busy" }));
+    const passed = practical() || state().passed;
+    footer(busy ? "Running\u2026" : passed ? "Continue" : "Run", () => {
+      if (busy) return;
+      if (practical() || state().passed) move(card + 1);
+      else run();
+    });
+    if (busy) root.querySelector(".actionbar .primary").disabled = true;
+  }
+  function cursor() {
+    var _a, _b, _c;
+    try {
+      storage.setItem(CURSOR_KEY, JSON.stringify({ version: 1, id: (_c = (_a = route.lesson) == null ? void 0 : _a.id) != null ? _c : (_b = route.exam) == null ? void 0 : _b.id, card, localCard }));
+    } catch (e) {
+    }
+  }
+  function move(next) {
+    var _a;
+    card = next;
+    if (state()) {
+      state().step = card < route.lesson.teach.length + 1 ? 0 : card === route.lesson.teach.length + 1 ? 1 : 2;
+      save();
+    }
+    cursor();
+    render();
+    (_a = window2.scrollTo) == null ? void 0 : _a.call(window2, 0, 0);
+  }
+  function footer(label, fn, back = true) {
+    const foot = el("footer", null, { class: "actionbar" });
+    if (busy) add(foot, button("Stop", stop));
+    else if (back) add(foot, button("Back", () => move(Math.max(0, card - 1))));
+    const primary = button(label, fn, true);
+    primary.disabled = busy;
+    add(foot, primary);
+    add(root, foot);
+  }
+  function readCursor() {
+    try {
+      const value = JSON.parse(storage.getItem(CURSOR_KEY));
+      if ((value == null ? void 0 : value.version) === 1 && Number.isInteger(value.card) && value.card >= 0) return value;
+    } catch (e) {
+    }
+    return null;
+  }
+  function initialCard(l) {
+    const s = state(), n = l.teach.length, remembered = readCursor();
+    localCard = 0;
+    if (s.passed) return n + 4;
+    if ((remembered == null ? void 0 : remembered.id) === l.id) {
+      if (l.mode === "local" && Number.isInteger(remembered.localCard)) localCard = Math.max(0, Math.min(remembered.localCard, l.local.setup.length + l.local.commands.length + 1));
+      const max = s.lastRun && s.snapshot ? n + 2 + Number(s.quiz[0] === l.quiz[0].correct) : n + 1;
+      return Math.min(remembered.card, max);
+    }
+    return s.step === 0 ? 0 : n + 1;
+  }
+  function activate(next) {
+    var _a, _b, _c, _d, _e, _f;
+    route = next != null ? next : { lesson: (_a = lessons.find((l) => l.id === store.state.lastLesson)) != null ? _a : lessons[0] };
+    sheet = null;
+    if (route.lesson) {
+      const l = route.lesson;
+      (_d = (_b = store.state.lessons)[_c = l.id]) != null ? _d : _b[_c] = emptyLesson(l);
+      store.state.lastLesson = l.id;
+      card = initialCard(l);
+      (_e = window2.history) == null ? void 0 : _e.replaceState(null, "", `#lesson=${encodeURIComponent(l.id)}`);
+      save();
+    } else {
+      const remembered = readCursor(), s = route.exam;
+      let max = 0;
+      while (max < s.exam.length - 1 && examEntry().answers[max] === s.exam[max].correct) max++;
+      card = (remembered == null ? void 0 : remembered.id) === s.id ? Math.min(remembered.card, max) : 0;
+      (_f = window2.history) == null ? void 0 : _f.replaceState(null, "", `#exam=${s.id}`);
+    }
     render();
   }
+  async function navigate(next) {
+    const token = generation;
+    if (!busy) await capture(token);
+    if (token !== generation) return;
+    retire();
+    activate(next);
+  }
+  function questionUI(content, q, index, answers, onChange, onContinue) {
+    const field = el("fieldset");
+    add(field, el("legend", q.prompt));
+    const readOnly = route.exam ? examEntry().passed : state().passed;
+    let correct = readOnly;
+    const feedback = el("p", readOnly ? "Completed concept \xB7 read-only" : "", { "aria-live": "polite", class: "quiz-feedback" });
+    q.options.forEach((option, i) => {
+      const radio = el("input", null, { type: "radio", name: "current-question", value: i });
+      radio.checked = answers[index] === i;
+      radio.disabled = readOnly;
+      radio.addEventListener("change", () => {
+        onChange(i);
+        correct = false;
+        feedback.textContent = "";
+        const b = root.querySelector(".actionbar .primary");
+        b.textContent = "Check answer";
+      });
+      add(field, add(el("label", null, { class: "choice" }), radio, doc.createTextNode(option)));
+    });
+    add(content, field, feedback);
+    footer(readOnly ? "Continue" : "Check answer", () => {
+      if (correct) {
+        onContinue();
+        return;
+      }
+      const answer = route.exam ? examEntry().answers[index] : state().quiz[index];
+      if (answer === null) {
+        feedback.textContent = "Choose an answer first.";
+        return;
+      }
+      correct = answer === q.correct;
+      feedback.textContent = correct ? "Correct. Continue when ready." : q.clue;
+      if (correct) root.querySelector(".actionbar .primary").textContent = "Continue";
+    });
+  }
+  async function finishLesson(l) {
+    if (state().passed) {
+      move(l.teach.length + 4);
+      return;
+    }
+    const grant = () => {
+      if (canPass(l, state(), results)) {
+        state().passed = true;
+        state().badge = l.mode === "local" ? "localSelfAttested" : "browserVerified";
+        save();
+        notice = "";
+        move(l.teach.length + 4);
+      } else {
+        notice = "Not yet. Practical checks and both concept answers must pass.";
+        move(l.teach.length + 1);
+      }
+    };
+    if (l.mode === "local" || practical()) {
+      grant();
+      return;
+    }
+    action(async (token) => {
+      await ensurePractice();
+      if (token !== generation) return;
+      results = await evaluateChecks(practice, l.task.checks, state().lastRun, clientFactory, () => token === generation);
+      if (token === generation) grant();
+    }, { python: l.mode === "python" });
+  }
+  function nextLesson(l) {
+    var _a;
+    const section = sections.find((s) => s.lessons.some((x) => x.id === l.id));
+    if (section.lessons.at(-1).id === l.id && examUnlocked(section, store.state) && !((_a = store.state.exams[section.id]) == null ? void 0 : _a.passed)) return navigate({ exam: section });
+    const next = lessons[lessons.findIndex((x) => x.id === l.id) + 1];
+    if (next) return navigate({ lesson: next });
+  }
+  function summaryUI(content, l) {
+    var _a;
+    if (!state().passed) {
+      move(l.teach.length + 1);
+      return;
+    }
+    add(content, el("h2", l.mode === "local" ? "Lab complete" : "Lesson complete"), el("p", l.mode === "local" ? "Local self-attested \xB7 not browser verified" : "Browser verified", { class: "badge" }), p(l.task.goal), p("Your work and notes are saved on this device."));
+    const next = lessons[lessons.findIndex((x) => x.id === l.id) + 1], section = sections.find((s) => s.lessons.some((x) => x.id === l.id));
+    if (next || !((_a = store.state.exams[section.id]) == null ? void 0 : _a.passed)) footer("Continue", () => nextLesson(l));
+    else footer("Review this lesson", () => move(0), false);
+  }
+  function lesson(l) {
+    const n = l.teach.length;
+    add(root, el("p", `Learn \xB7 Activity ${Math.min(card + 1, n + 5)} of ${n + 5}`, { class: "activity" }), el("h1", l.title));
+    const content = el("section", null, { class: "activity-card", "aria-label": "Current activity" });
+    add(root, content);
+    if (card < n) {
+      add(content, el("h2", "One idea"), p(l.teach[card]));
+      footer("Continue", () => move(card + 1), card > 0);
+    } else if (card === n) exampleUI(content, l);
+    else if (card === n + 1) practiceUI(content, l);
+    else if (card === n + 2 || card === n + 3) {
+      const index = card - n - 2;
+      add(content, el("h2", `Concept ${index + 1} of 2`));
+      questionUI(content, l.quiz[index], index, state().quiz, (value) => {
+        state().quiz[index] = value;
+        save();
+      }, () => index === 0 ? move(card + 1) : finishLesson(l));
+    } else summaryUI(content, l);
+  }
+  function examEntry() {
+    var _a, _b, _c;
+    return (_c = (_a = store.state.exams)[_b = route.exam.id]) != null ? _c : _a[_b] = { answers: route.exam.exam.map(() => null), passed: false };
+  }
+  function examUI(section) {
+    add(root, el("p", `Review \xB7 Question ${Math.min(card + 1, section.exam.length)} of ${section.exam.length}`, { class: "activity" }), el("h1", `${section.title} \xB7 Section review`));
+    const content = el("section", null, { class: "activity-card", "aria-label": "Current activity" });
+    add(root, content);
+    if (!examUnlocked(section, store.state)) {
+      add(content, p("Finish the current section\u2019s practical lessons before this review."));
+      footer("Return to lesson", () => {
+        var _a;
+        return navigate({ lesson: (_a = section.lessons.find((l) => {
+          var _a2;
+          return !((_a2 = store.state.lessons[l.id]) == null ? void 0 : _a2.passed);
+        })) != null ? _a : section.lessons[0] });
+      }, false);
+      return;
+    }
+    if (examEntry().passed) {
+      add(content, el("h2", "Section review complete"), p("Practical work and concepts completed."));
+      const next = lessons[lessons.findIndex((l) => l.id === section.lessons.at(-1).id) + 1];
+      footer(next ? "Continue" : "Review current lesson", () => navigate({ lesson: next != null ? next : section.lessons.at(-1) }), false);
+      return;
+    }
+    add(content, el("h2", "Section review"), p("One concept at a time. This review does not replace practical work."));
+    const index = Math.min(card, section.exam.length - 1);
+    questionUI(content, section.exam[index], index, examEntry().answers, (value) => {
+      examEntry().answers[index] = value;
+      save();
+    }, () => {
+      if (index < section.exam.length - 1) move(index + 1);
+      else {
+        examEntry().passed = section.exam.every((q, i) => examEntry().answers[i] === q.correct);
+        save();
+        if (!examEntry().passed) {
+          notice = "Review each concept before finishing.";
+          move(section.exam.findIndex((q, i) => examEntry().answers[i] !== q.correct));
+        } else {
+          notice = "";
+          render();
+        }
+      }
+    });
+  }
   function download(name, text2, type = "application/json") {
-    const blob = new window.Blob([text2], { type });
-    const url = window.URL.createObjectURL(blob), a = el("a", null, { href: url, download: name });
+    const url = window2.URL.createObjectURL(new window2.Blob([text2], { type })), a = el("a", null, { href: url, download: name });
     doc.body.appendChild(a);
     a.click();
     a.remove();
-    window.setTimeout(() => window.URL.revokeObjectURL(url), 1e3);
+    window2.setTimeout(() => window2.URL.revokeObjectURL(url), 1e3);
   }
-  function workButton(text2, fn) {
-    const b = button(text2, fn, true);
-    b.setAttribute("data-work", "");
-    return b;
+  function closeSheet() {
+    var _a, _b;
+    diagnosticAbort == null ? void 0 : diagnosticAbort.abort();
+    diagnosticAbort = null;
+    sheet = null;
+    render();
+    (_b = (_a = root.querySelector("header button")) == null ? void 0 : _a.focus) == null ? void 0 : _b.call(_a);
   }
-  function transcript(result, label) {
-    const area = el("section", null, { class: "transcript", "aria-label": label });
-    add(area, el("h3", label));
-    if (!result) return add(area, p("No run yet."));
-    for (const [name, value] of Object.entries(result)) add(area, el("h4", name), el("pre", shown(value)));
-    return area;
+  function openSheet(name) {
+    var _a, _b;
+    sheet = name;
+    render();
+    (_b = (_a = root.querySelector('[role="dialog"] button')) == null ? void 0 : _a.focus) == null ? void 0 : _b.call(_a);
   }
-  function notes() {
-    const box = el("textarea", null, { "aria-label": "Your notes", rows: 4, maxlength: MAX_TEXT });
-    box.value = state().notes;
-    box.addEventListener("input", () => {
-      state().notes = box.value;
-      save();
-    });
-    return details("Your notes \u2014 saved on this device", box);
-  }
-  function shellWarning() {
-    return details("What this practice space can and cannot do", p("JS Bash training sandbox, not a Linux OS. Python is real CPython WASM, without OS processes. Network shell commands are disabled."), p("Worker isolation keeps the interface responsive; it is not a malicious-code security boundary. Code can access browser APIs. Do not paste untrusted code, credentials, or secrets. Use one active tab. First Python use downloads the self-hosted Python runtime."));
-  }
-  ;
-  function backupPanel() {
-    const panel = details("Your progress & backups");
-    const c = completion(sections, store.state);
-    add(panel, p(`${c.done} of ${c.total} milestones: ${c.browserVerified} browser-verified lessons; ${c.localSelfAttested} local self-attested labs. Section exams count separately. Backups do not sync across devices.`));
-    add(panel, button("Export v2 backup", () => {
+  function backupsUI(panel) {
+    add(panel, p("Progress is stored only in this browser. Backups include saved files, drafts, notes and earned badges. Maximum 16 MiB. They do not sync devices."), button("Export v2 backup", () => {
       try {
         download("bash-trail-v2-backup.json", store.export());
       } catch (e) {
@@ -6464,368 +7147,220 @@ function mountApp(root, sections, { window = globalThis.window, storage, clientF
     }));
     const file = el("input", null, { type: "file", accept: ".json,application/json", "aria-label": "Import progress backup" });
     file.addEventListener("change", async () => {
-      const f = file.files?.[0];
+      var _a;
+      const f = (_a = file.files) == null ? void 0 : _a[0];
       if (!f) return;
       try {
-        if (f.size > MAX_BYTES) throw new Error("Backup exceeds 16 MiB. Nothing was replaced.");
+        if (f.size > MAX_BYTES) throw Error("Backup exceeds 16 MiB.");
         const raw = await f.text();
-        const { decodeBackup: decodeBackup2 } = await Promise.resolve().then(() => (init_progress(), progress_exports));
-        decodeBackup2(raw, lessons.map((l) => l.id), sections.map((s) => s.id));
-        if (!window.confirm("Replace all v2 progress, saved files, drafts and notes with this backup? Your original v1 progress will not change.")) return;
+        decodeBackup(raw, lessons.map((l) => l.id), sections.map((s) => s.id));
+        if (!window2.confirm("Replace all v2 progress, saved files, drafts and notes? Original v1 stays untouched.")) return;
         retire();
         store.import(raw);
         snapshotWarnings.clear();
-        route = null;
         notice = "Backup restored.";
-        render();
+        activate();
       } catch (e) {
-        notice = e.message;
+        notice = `${e.message} Nothing was replaced.`;
         announce();
       } finally {
         file.value = "";
       }
     });
-    add(panel, el("label", "Import v2 backup (maximum 16 MiB)"), file);
-    if (store.legacy() !== null) add(panel, p("Original v1 work found. It stays untouched and gives no v2 credit."), button("Export original v1 progress", () => download("bash-trail-v1-original.json", store.legacy())));
+    add(panel, el("label", "Import a v2 backup"), file);
+    if (store.legacy() !== null) add(panel, p("Original v1 work stays untouched and grants no new credit."), button("Export original v1 progress", () => download("bash-trail-v1-original.json", store.legacy())));
     add(panel, button("Reset all v2 progress", () => {
-      if (!window.confirm("Delete all v2 progress, notes, files and drafts on this device? Export a backup first. Original v1 progress stays untouched.")) return;
+      if (!window2.confirm("Delete all v2 progress, files, drafts and notes? Export a backup first. Original v1 stays unchanged.")) return;
       retire();
-      store.replace(emptyProgress());
-      snapshotWarnings.clear();
-      route = null;
-      notice = "V2 progress reset. Original v1 is unchanged.";
-      render();
-    }));
-    return panel;
-  }
-  function roadmap() {
-    const map = details("Roadmap \xB7 12 small sections");
-    for (const level of [...new Set(sections.map((s) => s.level))]) {
-      const group = details(level);
-      for (const section of sections.filter((s) => s.level === level)) {
-        const unit = details(`${section.id.slice(1)} \xB7 ${section.title}`, p(section.summary));
-        for (const lesson2 of section.lessons) add(unit, button(`${store.state.lessons[lesson2.id]?.passed ? "\u2713 " : ""}${lesson2.title}${lesson2.mode === "local" ? " \xB7 Real Linux required" : ""}`, () => navigate({ lesson: lesson2 })));
-        const unlocked = examUnlocked(section, store.state);
-        const exam2 = button(unlocked ? "Section concept exam" : "Section exam \xB7 finish these lessons first", () => navigate({ exam: section }));
-        exam2.disabled = !unlocked;
-        add(unit, exam2);
-        add(group, unit);
-      }
-      add(map, group);
-    }
-    return map;
-  }
-  function landing() {
-    add(root, el("div", "BASH TRAIL / V2", { class: "eyebrow" }), el("h1", "A small first step into the terminal."), p("Learn one idea. Try it in your browser. See what actually happened."), button("Start here, no installation", () => navigate({ lesson: lessons[0] }), true));
-    if (store.state.lastLesson) {
-      const l = lessons.find((l2) => l2.id === store.state.lastLesson);
-      if (l) add(root, button(`Resume: ${l.title}`, () => navigate({ lesson: l })));
-    }
-    add(root, p("No Linux setup for the first 30 lessons. The final 6 labs require real Linux."), roadmap(), backupPanel(), shellWarning());
-  }
-  function learn(l) {
-    add(root, el("h2", "1 \xB7 Learn"), p(l.why));
-    l.teach.forEach((t) => add(root, p(t)));
-    const terms = el("dl");
-    l.terms.forEach((t) => add(terms, el("dt", t.word), el("dd", t.meaning)));
-    add(root, terms, el("h3", l.example.title), p(l.example.explanation));
-    for (const [path2, source] of Object.entries(l.example.files)) if (/\.(py|sh)$/.test(path2)) {
-      const label = `Example source \xB7 ${path2}`;
-      add(root, add(el("section", null, { "aria-label": label }), el("h4", label), el("pre", source)));
-    }
-    add(root, add(el("section", null, { "aria-label": "Run this example" }), el("h4", "Run this example"), el("pre", l.example.code)));
-    if (l.mode !== "local") add(root, p("The example runs in its own temporary space. It cannot overwrite your files or count toward your checks."), workButton("Run example", () => action(async (token) => {
-      example = clientFactory();
       try {
-        await example.init({ fixtures: l.example.files, directories: l.example.directories, cwd: l.example.cwd });
-        const r = await example.exec(l.example.code);
-        if (token === generation) {
-          exampleResult = r;
-          notice = "Example complete. Your practice work was not changed.";
-        }
-      } finally {
-        example?.stop();
-        example = null;
+        store.replace(emptyProgress());
+      } catch (e) {
+        notice = e.message;
       }
-    }, { python: l.mode === "python" || l.example.code.includes("python") })), exampleResult ? transcript(exampleResult, "Example result \u2014 not a task check") : null);
-    else add(root, p("Real Linux required. This example is for reading; it is not executed in this browser."));
-    add(root, button("Try it yourself", () => {
-      state().step = 1;
-      save();
-      render();
-    }, true));
-  }
-  function files(l) {
-    const snapshot = state().snapshot ?? { files: l.task.files, directories: l.task.directories, cwd: l.task.cwd };
-    const box = details("Practice files", p(`Working directory: ${snapshot.cwd}`));
-    snapshot.directories.forEach((path2) => add(box, p(`${path2}/`)));
-    for (const [path2, text2] of Object.entries(snapshot.files)) add(box, details(path2, el("pre", shown(text2))));
-    if (!Object.keys(snapshot.files).length) add(box, p("No files yet. You can create them with commands."));
-    return box;
-  }
-  function localTry(l) {
-    add(root, el("strong", "Real Linux required", { class: "badge" }), p("This lab does not run in the browser. Run the supplied verifier on your own Linux machine. Completion is self-attested, not browser-verified."), el("h3", "Local setup"), list(l.local.setup, true));
-    for (const item of l.local.commands) add(root, el("h3", item.label), el("pre", item.command), p(`Expected: ${item.expected}`));
-    add(root, button("Download local verifier", () => {
-      download("verify_lab.py", l.local.testFile, "text/x-python");
-      downloaded.add(l.id);
-      notice = "Verifier downloaded. Follow the local instructions before attesting.";
-      render();
-    }, true), p("Save the verifier in this exercise\u2019s directory as verify_lab.py. Run: python3 verify_lab.py -v"), button("Continue to local self-attestation", () => {
-      state().step = 2;
-      save();
-      render();
+      snapshotWarnings.clear();
+      notice = "V2 progress reset. Original v1 is unchanged.";
+      activate({ lesson: lessons[0] });
     }));
   }
-  function tryLesson(l) {
-    add(root, el("h2", "2 \xB7 Try"), p(l.task.goal), list(l.task.requirements), list(l.steps, true));
-    if (l.mode === "local") {
-      localTry(l);
-      return;
-    }
-    if (l.task.editor) {
-      const editor = el("textarea", null, { "aria-label": `Code editor: ${l.task.editor.path}`, rows: 12, spellcheck: "false", autocapitalize: "off", autocomplete: "off", maxlength: MAX_TEXT });
-      editor.value = state().draft;
-      editor.addEventListener("input", () => {
-        state().draft = editor.value;
-        invalidate();
-      });
-      add(root, el("h3", `Editor \xB7 ${l.task.editor.path}`), editor, workButton("Save file", () => action(async (token) => {
-        await ensurePractice();
-        await practice.write(l.task.editor.path, state().draft);
-        await capture(token);
-        notice = "File saved to the practice filesystem.";
-      })), workButton("Save & run", () => run(l.task.runCommand, true)));
-    }
-    const input = el("input", null, { type: "text", "aria-label": "Your command", spellcheck: "false", autocapitalize: "off", autocomplete: "off", maxlength: MAX_TEXT, placeholder: "Type a command, then Run" });
-    input.value = state().command;
-    input.addEventListener("input", () => {
-      state().command = input.value;
-      save();
-    });
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        run(input.value);
+  function sheetUI() {
+    var _a, _b, _c, _d, _e;
+    const titles = { menu: "Current lesson", help: "Lesson help", notes: "Your notes", backups: "Backups", files: "Practice files", run: "Run details", check: "Expected and actual", browser: "Browser check" };
+    const panel = el("section", null, { class: "sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "sheet-title" });
+    add(root, p((_b = (_a = route.lesson) == null ? void 0 : _a.title) != null ? _b : route.exam.title), panel);
+    add(panel, el("h1", (_c = titles[sheet]) != null ? _c : "Current activity", { id: "sheet-title" }), button("Done", closeSheet));
+    panel.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSheet();
+      }
+      if (event.key === "Tab") {
+        const nodes = [...panel.querySelectorAll("button,input,textarea,a[href]")].filter((n) => !n.disabled), first = nodes[0], last = nodes.at(-1);
+        if (event.shiftKey && doc.activeElement === first) {
+          event.preventDefault();
+          last == null ? void 0 : last.focus();
+        } else if (!event.shiftKey && doc.activeElement === last) {
+          event.preventDefault();
+          first == null ? void 0 : first.focus();
+        }
       }
     });
-    add(root, el("label", "Your command"), input, workButton("Run", () => run(input.value)), transcript(state().lastRun, "Your latest run"), files(l), details("Supported command help", p("Start with the commands taught in this lesson. Common tools: pwd, ls, cd, cat, echo, printf, mkdir, touch, cp, mv, rm, grep, sort, uniq, wc, head, tail, bash, python3. Use help or a tool\u2019s --help where supported. Not all Linux commands or flags exist."), p("Use the editor for scripts. No sudo, apt, interactive prompts, real process control, network shell commands or OS subprocesses. Shell scalar variables and cwd persist in this worker, but functions, aliases and arrays across separate Run clicks are not guaranteed. Snapshots restore files and cwd, not shell variables. Put related commands in one script.")), button("Check my work", () => {
-      state().step = 2;
-      save();
-      render();
-    }, true));
-  }
-  function run(command, withSave = false) {
-    if (!command?.trim()) return;
     const l = route.lesson;
-    invalidate();
-    action(async (token) => {
-      await ensurePractice();
-      if (withSave) await practice.write(l.task.editor.path, state().draft);
-      const r = await practice.exec(command);
-      if (token !== generation) return;
-      const saved = await capture(token, { lastRun: { stdout: r.stdout.slice(0, MAX_TEXT), stderr: r.stderr.slice(0, MAX_TEXT), exitCode: r.exitCode, cwd: r.cwd } });
-      if (token !== generation) return;
-      notice = saved ? "Run complete. Read stdout, stderr and exitCode below." : `${r.exitCode === 0 ? "Run succeeded" : "Run finished"}, but latest files not saved.`;
-    }, { python: l.mode === "python" || command.includes("python") });
-  }
-  function quizUI(questions, answers, onChange) {
-    const box = el("div");
-    questions.forEach((q, index) => {
-      const field = el("fieldset");
-      add(field, el("legend", `${index + 1}. ${q.prompt}`));
-      q.options.forEach((option, i) => {
-        const label = el("label", null, { class: "choice" }), radio = el("input", null, { type: "radio", name: `quiz-${index}`, value: i });
-        radio.checked = answers[index] === i;
-        radio.addEventListener("change", () => onChange(index, i));
-        add(label, radio, doc.createTextNode(option));
-        add(field, label);
-      });
-      add(box, field);
-    });
-    return box;
-  }
-  function checkLesson(l) {
-    add(root, el("h2", "3 \xB7 Check"));
-    if (l.mode === "local") {
-      add(root, el("strong", "Local self-attestation \xB7 not browser verified", { class: "badge" }));
-      if (!downloaded.has(l.id)) add(root, p("Download the verifier on the Try step, run it locally, and only then attest here."));
-      l.local.checks.forEach((text2, i) => {
-        const label = el("label", null, { class: "choice" }), input = el("input", null, { type: "checkbox" });
-        input.checked = state().localChecks[i] ?? false;
-        input.disabled = !downloaded.has(l.id);
-        input.addEventListener("change", () => {
-          state().localChecks[i] = input.checked;
-          state().passed = false;
-          state().badge = null;
-          save();
-        });
-        add(root, add(label, input, doc.createTextNode(text2)));
-      });
-    } else {
-      add(root, p("These checks read your real practice files, working directory and latest learner run. The current editor draft is saved before checking. Examples never count."), workButton("Run automatic checks", () => action(async (token) => {
-        const checkingRevision = revision;
-        await ensurePractice();
-        if (l.task.editor) {
-          await practice.write(l.task.editor.path, state().draft);
-          await capture(token);
-        }
-        if (token !== generation) return;
-        const r = await evaluateChecks(practice, l.task.checks, state().lastRun, () => {
-          const client = clientFactory();
-          const oldStop = client.stop.bind(client);
-          const holder = client;
-          activeChecks.add(holder);
-          client.stop = (...args) => {
-            activeChecks.delete(holder);
-            oldStop(...args);
-          };
-          return client;
-        }, () => token === generation && checkingRevision === revision);
-        if (token === generation) {
-          if (checkingRevision !== revision) {
-            results = [];
-            notice = "Your draft changed while checking. Run automatic checks again.";
-            return;
-          }
-          results = r;
-          notice = r.every((x) => x.passed) ? "Practical checks passed. Now answer both concept questions." : "Not yet. Compare expected and actual, then follow the next clue.";
-        }
-      }, { python: l.mode === "python" || l.task.checks.some((c) => c.command?.includes("python")) })));
-      for (const r of results) {
-        const feedback = el("section", null, { class: r.passed ? "feedback pass" : "feedback fail" });
-        add(feedback, el("h3", `${r.passed ? "Pass" : "Not yet"} \xB7 ${r.label}`), el("h4", "Expected"), el("pre", shown(r.expected)), el("h4", "Actual"), el("pre", shown(r.actual)));
-        if (!r.passed) add(feedback, p(`Next clue: ${r.clue}`));
-        add(root, feedback);
-      }
+    if (sheet === "menu") {
+      if (l) add(panel, button("Help & resources", () => openSheet("help")), button("Notes", () => openSheet("notes")), button("Practice files", () => openSheet("files")), button("Restart this lesson", () => {
+        if (!window2.confirm("Reset this lesson\u2019s work and earned badge? Your notes remain.")) return;
+        const notes = state().notes;
+        retire();
+        store.state.lessons[l.id] = emptyLesson(l);
+        state().notes = notes;
+        snapshotWarnings.delete(l.id);
+        notice = "Practice reset. Notes kept.";
+        save();
+        card = 0;
+        sheet = null;
+        cursor();
+        render();
+      }));
+      add(panel, button("Backups", () => openSheet("backups")), button("Browser check", () => openSheet("browser")));
     }
-    add(root, el("h3", "Two concept questions"), quizUI(l.quiz, state().quiz, (i, value) => {
-      state().quiz[i] = value;
-      state().passed = false;
-      state().badge = null;
-      save();
-    }), button("Check concepts & finish lesson", () => {
-      if (canPass(l, state(), results)) {
-        state().passed = true;
-        state().badge = l.mode === "local" ? "localSelfAttested" : "browserVerified";
-        notice = l.mode === "local" ? "Lab complete \xB7 local self-attested." : "Lesson complete \xB7 browser verified.";
+    if (sheet === "notes" && l) {
+      add(panel, p("Saved on this device. Included in your progress backup."));
+      const box = el("textarea", null, { "aria-label": "Your notes", rows: 8, maxlength: MAX_TEXT });
+      box.value = state().notes;
+      box.addEventListener("input", () => {
+        state().notes = box.value;
+        save();
+      });
+      add(panel, box);
+    }
+    if (sheet === "help" && l) {
+      add(panel, p(l.why));
+      const terms = el("dl");
+      l.terms.forEach((t) => add(terms, el("dt", t.word), el("dd", t.meaning)));
+      add(panel, terms);
+      for (let i = 0; i < state().hints; i++) add(panel, p(l.hints[i]));
+      if (state().hints < l.hints.length) add(panel, button("Show one clue", () => {
+        state().hints++;
         save();
         render();
-      } else {
-        notice = "Not yet: all practical checks and both concept questions must pass.";
-        render();
-        l.quiz.forEach((q, i) => {
-          if (state().quiz[i] !== q.correct) add(root, p(`Concept ${i + 1} clue: ${q.clue}`));
-        });
-      }
-    }, true));
-    if (state().passed) {
-      add(root, p(`Completed: ${state().badge === "localSelfAttested" ? "local self-attested" : "browser verified"}`));
-      const index = lessons.findIndex((x) => x.id === l.id), section = sections.find((s) => s.lessons.some((x) => x.id === l.id));
-      if (examUnlocked(section, store.state)) add(root, button("Take section exam", () => navigate({ exam: section }), true));
-      if (lessons[index + 1]) add(root, button("Next lesson", () => navigate({ lesson: lessons[index + 1] })));
+      }));
+      l.resources.forEach((r) => add(panel, el("a", r.label, { href: r.url, target: "_blank", rel: "noopener noreferrer" })));
+      add(panel, p("Training sandbox, not Linux. Python is CPython WASM without OS processes. Network shell commands are disabled. Related commands should stay together in one script: snapshots restore files and cwd, not shell variables."), p("Workers keep this page responsive but are not a security boundary. Never paste untrusted code, secrets or credentials. Use one active tab."));
     }
-  }
-  const activeChecks = /* @__PURE__ */ new Set();
-  function lesson(l) {
-    add(root, el("div", `${l.minutes} MIN \xB7 ${l.mode === "local" ? "REAL LINUX REQUIRED" : "BROWSER PRACTICE"}`, { class: "eyebrow" }), el("h1", l.title));
-    const steps = el("nav", null, { "aria-label": "Lesson steps", class: "steps" });
-    ["Learn", "Try", "Check"].forEach((name, i) => {
-      const b = button(`${i + 1} \xB7 ${name}`, () => {
-        state().step = i;
-        save();
-        render();
+    if (sheet === "backups") backupsUI(panel);
+    if (sheet === "files" && l) {
+      const snap = (_d = state().snapshot) != null ? _d : { cwd: l.task.cwd, files: l.task.files, directories: l.task.directories };
+      add(panel, p(`Current directory: ${snap.cwd}`));
+      snap.directories.forEach((path2) => add(panel, p(`${path2}/`)));
+      for (const [path2, text2] of Object.entries(snap.files)) add(panel, el("h2", path2), el("pre", shown(text2)));
+      if (!Object.keys(snap.files).length) add(panel, p("No files yet."));
+    }
+    if (sheet === "run") {
+      const r = card === (l == null ? void 0 : l.teach.length) ? exampleResult : (_e = state()) == null ? void 0 : _e.lastRun;
+      if (r) for (const [name, value] of Object.entries(r)) add(panel, el("h2", name), el("pre", shown(value)));
+      else add(panel, p("No run yet."));
+    }
+    if (sheet === "check") {
+      const failed = results.find((r) => !r.passed);
+      if (failed) add(panel, p(failed.label), el("h2", "Expected"), el("pre", shown(failed.expected)), el("h2", "Actual"), el("pre", shown(failed.actual)), p(failed.clue));
+    }
+    if (sheet === "browser") {
+      add(panel, p("Optional check of worker and interpreter support, in a separate empty space. No learner files, notes or code are uploaded. This does not certify physical iPhone Safari."));
+      const python = el("input", null, { type: "checkbox", "aria-label": "Include Python check" });
+      add(panel, add(el("label", null, { class: "choice" }), python, doc.createTextNode("Include real Python (first use downloads runtime assets)")));
+      const stage = el("p", "", { "aria-live": "polite" }), output = el("pre", diagnostic != null ? diagnostic : "No check run yet.");
+      const runButton = button("Run browser check", async () => {
+        if (diagnosticAbort) return;
+        const controller = new AbortController();
+        diagnosticAbort = controller;
+        runButton.disabled = true;
+        stage.textContent = "Checking\u2026";
+        try {
+          const result = await browserCheck({ python: python.checked, signal: controller.signal, onStage: (s) => {
+            if (sheet === "browser") stage.textContent = `${s.id}: ${s.status}`;
+          } });
+          if (diagnosticAbort !== controller) return;
+          diagnostic = formatBrowserReport(result);
+          output.textContent = diagnostic;
+          stage.textContent = result.passed ? "Browser check passed." : "Browser check found an issue. Read or download the report.";
+        } catch (e) {
+          stage.textContent = `Browser check failed: ${e.message}`;
+        } finally {
+          if (diagnosticAbort === controller) diagnosticAbort = null;
+          runButton.disabled = false;
+        }
       });
-      if (state().step === i) b.setAttribute("aria-current", "step");
-      add(steps, b);
-    });
-    add(root, steps);
-    if (state().step === 0) learn(l);
-    else if (state().step === 1) tryLesson(l);
-    else checkLesson(l);
-    const hint = details("A little help");
-    for (let i = 0; i < state().hints; i++) add(hint, p(`${i + 1}. ${l.hints[i]}`));
-    if (state().hints < 3) add(hint, button(`Reveal hint ${state().hints + 1} of 3`, () => {
-      state().hints++;
-      save();
-      render();
-    }));
-    add(root, hint, notes());
-    if (l.resources.length) {
-      const links = details("Further reading");
-      l.resources.forEach((r) => add(links, el("a", r.label, { href: r.url, target: "_blank", rel: "noopener noreferrer" })));
-      add(root, links);
+      add(panel, runButton, button("Stop browser check", () => {
+        diagnosticAbort == null ? void 0 : diagnosticAbort.abort();
+        diagnosticAbort = null;
+        runButton.disabled = false;
+        stage.textContent = "Browser check stopped. Retry starts a new empty worker.";
+      }), stage, output, button("Download browser report", () => {
+        if (diagnostic) download("bash-trail-browser-check.json", diagnostic);
+        else {
+          stage.textContent = "Run the browser check first.";
+        }
+      }));
     }
-    add(root, button("Reset this practice", () => {
-      if (!window.confirm("Reset this lesson\u2019s practice files, run result, checks and draft? Your notes remain.")) return;
-      const notes2 = state().notes;
-      for (const c of activeChecks) c.stop();
-      activeChecks.clear();
-      retire();
-      store.state.lessons[l.id] = emptyLesson(l);
-      state().notes = notes2;
-      save();
-      snapshotWarnings.delete(l.id);
-      notice = "Practice reset to the lesson\u2019s original files. Notes kept.";
-      render();
-    }), shellWarning());
-  }
-  function exam(section) {
-    add(root, el("h1", `${section.title} \xB7 concept exam`));
-    if (!examUnlocked(section, store.state)) {
-      add(root, p("Finish all three section lessons to unlock this exam."));
-      return;
-    }
-    const entry = () => store.state.exams[section.id] ??= { answers: section.exam.map(() => null), passed: false };
-    add(root, p("This is a concept exam, not a replacement for practical checks."), quizUI(section.exam, entry().answers, (i, value) => {
-      entry().answers[i] = value;
-      entry().passed = false;
-      save();
-    }), button("Check section exam", () => {
-      entry().passed = section.exam.every((q, i) => entry().answers[i] === q.correct);
-      save();
-      notice = entry().passed ? "Section concept exam passed." : "Not yet. Revisit the clues below.";
-      render();
-      if (!entry().passed) section.exam.forEach((q, i) => {
-        if (entry().answers[i] !== q.correct) add(root, p(`Question ${i + 1} clue: ${q.clue}`));
-      });
-    }, true));
-    if (entry().passed) add(root, p("Section concept exam passed."), button("Back to roadmap", () => navigate(null)));
   }
   function render() {
     while (root.firstChild) root.removeChild(root.firstChild);
     const top = el("header");
-    add(top, button("Bash Trail", () => navigate(null)), button("Roadmap & progress", () => navigate(null)));
-    if (route?.lesson && route.lesson.mode !== "local") add(top, button("Stop", stop));
-    add(root, top, el("p", status(), { id: "status", role: "status", "aria-live": "polite" }));
-    if (route?.lesson) lesson(route.lesson);
-    else if (route?.exam) exam(route.exam);
-    else landing();
+    add(top, el("span", "Bash Trail", { class: "wordmark" }), button("More", () => sheet ? closeSheet() : openSheet("menu")));
+    top.querySelector("button").disabled = busy;
+    add(root, top);
+    if (sheet) sheetUI();
+    else if (route == null ? void 0 : route.lesson) lesson(route.lesson);
+    else if (route == null ? void 0 : route.exam) examUI(route.exam);
+    const statusNode = el("p", status(), { id: "status", role: "status", "aria-live": "polite" });
+    const content = root.querySelector(".activity-card");
+    if (content) {
+      if (busy && !root.querySelector("[data-busy]")) add(content, el("p", "Checking saved work\u2026", { "data-busy": "" }));
+      content.appendChild(statusNode);
+    } else add(root, statusNode);
+    announce();
   }
-  function fromHash() {
-    const hash = window.location.hash.slice(1), [kind, id] = hash.split("=");
-    if (kind === "lesson") {
-      const l = lessons.find((x) => x.id === decodeURIComponent(id ?? ""));
-      if (l) return navigate({ lesson: l });
+  function fromHash(initial = false) {
+    let next;
+    try {
+      const [kind, id] = window2.location.hash.slice(1).split("=");
+      if (kind === "lesson") {
+        const l = lessons.find((l2) => l2.id === decodeURIComponent(id));
+        if (l) next = { lesson: l };
+      }
+      if (kind === "exam") {
+        const s = sections.find((s2) => s2.id === id);
+        if (s) next = { exam: s };
+      }
+    } catch (e) {
     }
-    if (kind === "exam") {
-      const s = sections.find((x) => x.id === id);
-      if (s) return navigate({ exam: s });
-    }
-    return navigate(null);
+    if (initial) activate(next);
+    else navigate(next);
+  }
+  function onBrowserError(event) {
+    var _a;
+    if (((_a = event.detail) == null ? void 0 : _a.code) !== "BROWSER_SCRIPT_ERROR") return;
+    retire();
+    sheet = null;
+    notice = "A browser script error interrupted this activity. Saved work stays on this device. Retry or open More \u2192 Browser check.";
+    render();
+    revealFeedback();
   }
   const onHash = () => fromHash();
-  window.addEventListener("hashchange", onHash);
-  window.addEventListener("pagehide", save);
-  if (window.location.hash.includes("=")) fromHash();
-  else render();
+  window2.addEventListener("hashchange", onHash);
+  window2.addEventListener("pagehide", save);
+  window2.addEventListener("bash-trail-browser-error", onBrowserError);
+  fromHash(true);
+  const cleanupViewport = installKeyboardViewport(window2, root);
   return { store, navigate, destroy() {
     retire();
-    for (const c of activeChecks) c.stop();
-    window.removeEventListener("hashchange", onHash);
-    window.removeEventListener("pagehide", save);
+    cleanupViewport();
+    window2.removeEventListener("hashchange", onHash);
+    window2.removeEventListener("pagehide", save);
+    window2.removeEventListener("bash-trail-browser-error", onBrowserError);
   } };
 }
 
 // src/main.mjs
 mountApp(document.querySelector("#app"), course_curriculum_default);
+window.__BASH_TRAIL_READY__ = true;
+window.dispatchEvent(new Event("bash-trail-ready"));
